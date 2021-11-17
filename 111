@@ -1,0 +1,71 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import statsmodels.stats.weightstats as st
+from scipy.stats import chi2_contingency
+import re
+
+def readdata(filename):
+    df = pd.read_csv(filename, index_col=0, encoding='gbk')
+    firstfive = print(df.head())
+    return df
+
+df = readdata("C:\\Users\\10658\\Desktop\\jiashi Liu\\training for team6.csv")
+cols = list(df.columns)
+
+df0 = df.loc[df['DEP_DEL15']==0]#default filght
+df1 = df.loc[df['DEP_DEL15']==1]#normal filght
+#print(df0)
+
+def colmeanstd(col):
+    col1_mean=df0[str(col)].mean()
+    col2_mean=df1[str(col)].mean()
+    col1_std =df0[str(col)].std()
+    col2_std =df1[str(col)].std()
+    print('the mean of'+str(col)+'(default)=',col1_mean,'std of'+str(col)+'(default)=',col1_std)
+    print('the mean of'+str(col)+'(normal)=',col2_mean,'std of'+str(col)+'(normal)=',col2_std)
+    return
+
+def plot(col):
+    sns.distplot(df1[str(col)])
+    plt.title('the distribution of'+str(col))
+    plt.show()
+    return
+
+def t_test(col):
+    t,p_two,dof=st.ttest_ind(df0[str(col)],df1[str(col)],usevar='unequal')
+    print('t=',t,'p_twoTail=',p_two,',df=',dof)
+    alpha=0.06
+    if(p_two< alpha/2):
+        print('reject null, it is significant, so '+str(col)+'should be considered')
+    else:
+        print('accept null, it is insignificant, so'+str(col)+'should not be considered')
+    return
+
+def chi2test(col):
+    df0 = df.loc[df['DEP_DEL15'] == 0]
+    df1 = df.loc[df['DEP_DEL15'] == 1]
+    array1 = pd.Series(df0[str(col)].value_counts().replace(to_replace='NONE',value=np.nan).dropna()).values
+    array2 = pd.Series(df1[str(col)].value_counts().replace(to_replace='NONE',value=np.nan).dropna()).values
+    table = np.vstack((array1,array2))
+    if(array1.size!=array2.size):
+        df0 = df0.replace(to_replace='NONE',value=np.nan).dropna()
+        df1 = df1.replace(to_replace='NONE',value=np.nan).dropna()
+        array1 = pd.Series(df0[str(col)].value_counts().replace(to_replace='NONE', value=np.nan).dropna()).values
+        array2 = pd.Series(df1[str(col)].value_counts().replace(to_replace='NONE', value=np.nan).dropna()).values
+        table = np.vstack((array1, array2))
+    result = chi2_contingency(table)
+    alpha=0.05
+    if(result[1]<alpha):
+        print('reject null, it is significant, so ' + str(col) + 'should be considered')
+    else:
+        print('accept null, it is insignificant, so' + str(col) + 'should not be considered')
+    return
+
+for column in cols:
+    if re.search('（数值，t检验）', column) is None:
+        chi2test(column)
+    else:
+        colmeanstd(column)
+        t_test(column)
